@@ -13,9 +13,9 @@ set more off
 capture log close
 * In case you have a PC, change the directory using something like
 * cd "C:\Users\username\ec1152\section"
-cd "C:\Users\diana\Dropbox\Documentos\GitHub\Ec1152_sections\s01"
 * In case you have a Mac, the grammar for directories is a little different
 * cd "/Users/username/ec1152/section"
+cd "C:\Users\diana\Dropbox\Documentos\GitHub\Ec1152_diana\s01"
 
 * Opens our dataset [that you have downloaded on the above folder]
 use "data\section1_bowling.dta", replace
