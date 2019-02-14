@@ -1,0 +1,165 @@
+-----------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  C:\Users\diana\Dropbox\Documentos\GitHub\Ec1152_diana\s02\stata_workshop.log
+  log type:  text
+ opened on:  14 Feb 2019, 15:08:16
+
+. 
+. * Opens our dataset [that you have downloaded on the above folder]
+. use "data\atlas_ranks.dta", replace
+
+. 
+. * List data for one place
+. * This example is for Harvard Yard, its full census tract is 25017353700. 
+. * That is, state 25, county 017, tract 353700 (2 digits state + 3 digits county + 6 digits tract)
+. list kfr_pooled* ranks_pooled* if (state==25 & county==17 & tract==353700)
+
+       +-----------------------------------------------------------------+
+       | kfr_p~25   kfr_p~75   kfr_po~0   ra~d_p25   ra~d_p75   r~d_p100 |
+       |-----------------------------------------------------------------|
+31723. | 45137.92   53457.02   60914.86   .5225905   .5832499   .6309459 |
+       +-----------------------------------------------------------------+
+
+. 
+. * Calculate non-weighted summary stats
+. summarize kfr_pooled_p25
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+kfr_poole~25 |     72,011    34443.48    8169.155          0   105732.4
+
+. summarize kfr_pooled_p25 if state==25
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+kfr_poole~25 |      1,448     38470.7    7867.778   18028.85   82633.49
+
+. summarize kfr_pooled_p25 if (state==25 & county==17)
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+kfr_poole~25 |        317    42066.69    7411.622   24417.36   75106.38
+
+. 
+. * Calculate weighted summary stats
+. sum kfr_pooled_p25 [aw = count_pooled]
+
+    Variable |     Obs      Weight        Mean   Std. Dev.       Min        Max
+-------------+-----------------------------------------------------------------
+kfr_poole~25 |  71,923    72229071    34311.68   7899.586          0   105732.4
+
+. sum kfr_pooled_p25 if state==25 [aw = count_pooled]
+
+    Variable |     Obs      Weight        Mean   Std. Dev.       Min        Max
+-------------+-----------------------------------------------------------------
+kfr_poole~25 |   1,448     1499584    38721.05    7738.85   18028.85   82633.49
+
+. sum kfr_pooled_p25 if state==25 & county==17  [aw = count_pooled]
+
+    Variable |     Obs      Weight        Mean   Std. Dev.       Min        Max
+-------------+-----------------------------------------------------------------
+kfr_poole~25 |     317      329040     42326.1   7130.793   24417.36   75106.38
+
+. 
+. * Run regression to ask whether places that are better for poor kids are better for rich kids
+. // All the US at once 
+. regress kfr_pooled_p25 kfr_pooled_p75, robust
+
+Linear regression                               Number of obs     =     72,009
+                                                F(1, 72007)       =   46157.95
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.5331
+                                                Root MSE          =     5581.3
+
+--------------------------------------------------------------------------------
+               |               Robust
+kfr_pooled_p25 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------+----------------------------------------------------------------
+kfr_pooled_p75 |   .6285573   .0029256   214.84   0.000     .6228231    .6342916
+         _cons |   2072.694   145.1661    14.28   0.000     1788.169    2357.219
+--------------------------------------------------------------------------------
+
+. twoway (scatter kfr_pooled_p25 kfr_pooled_p75)
+
+. graph export "graphs\ugly_scatter1.png", replace
+(file graphs\ugly_scatter1.png written in PNG format)
+
+. 
+. // Just for my county
+. regress kfr_pooled_p25 kfr_pooled_p75 if (state==25 & county==17), robust
+
+Linear regression                               Number of obs     =        317
+                                                F(1, 315)         =     138.48
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.4061
+                                                Root MSE          =     5720.7
+
+--------------------------------------------------------------------------------
+               |               Robust
+kfr_pooled_p25 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+---------------+----------------------------------------------------------------
+kfr_pooled_p75 |   .7122952   .0605303    11.77   0.000     .5932003      .83139
+         _cons |  -541.3381   3563.903    -0.15   0.879    -7553.401    6470.724
+--------------------------------------------------------------------------------
+
+. twoway (scatter kfr_pooled_p25 kfr_pooled_p75 if (state==25 & county==17))
+
+. graph export "graphs\ugly_scatter2.png", replace
+(file graphs\ugly_scatter2.png written in PNG format)
+
+. 
+. // Makes a nicer graph by customizing options
+. // This is not needed, but makes it nicer. Check section1 do file as well.
+. #delimit ;
+delimiter now ;
+. twoway 
+>         (lfitci kfr_pooled_p25 kfr_pooled_p75 if (state==25 & county==17) , fcolor(%50) alcolor(%50)) 
+>         (scatter kfr_pooled_p25 kfr_pooled_p75 if (state==25 & county==17) , mcolor(navy%50) msymbol(circle_hollow) ), 
+>         ytitle("HH income of Kids with Parents' Rank = 25") 
+>         xtitle("HH income of Kids with Parents' Rank = 75") 
+>         legend(off)
+>         graphregion(color(white)) bgcolor(white) ;
+
+. ;
+. #delimit cr 
+delimiter now cr
+. graph export "graphs\nicer_scatter.png", replace
+(file graphs\nicer_scatter.png written in PNG format)
+
+. 
+. * Correlations
+. corr kfr_pooled_p25 kfr_pooled_p75 emp2000 job_density_2013
+(obs=71,924)
+
+             | kfr_p~25 kfr_p~75  emp2000 job~2013
+-------------+------------------------------------
+kfr_poole~25 |   1.0000
+kfr_poole~75 |   0.7304   1.0000
+     emp2000 |   0.3492   0.3228   1.0000
+job_den~2013 |  -0.0086  -0.0244  -0.0084   1.0000
+
+
+. 
+. * Install this package that will do what you want
+. // net install pr0041.pkg
+. // help corrci
+. corrci kfr_pooled_p25 kfr_pooled_p75 emp2000 job_density_2013, level(95)
+
+(obs=71,924)
+
+                                   correlations and 95% limits
+kfr_pooled_p25   kfr_pooled_p75        0.730    0.727    0.734
+kfr_pooled_p25   emp2000               0.349    0.343    0.356
+kfr_pooled_p25   job_density_2013     -0.009   -0.016   -0.001
+kfr_pooled_p75   emp2000               0.323    0.316    0.329
+kfr_pooled_p75   job_density_2013     -0.024   -0.032   -0.017
+emp2000          job_density_2013     -0.008   -0.016   -0.001
+
+. 
+. 
+. * You should do more stuff in here... Like doing the correlations only for your county
+. * testing other graphs and correlating other variables. Explore!
+. 
+. 
+. * The end! Those next lines are not really needed
+. capture log close
